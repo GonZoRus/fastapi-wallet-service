@@ -1,13 +1,11 @@
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Depends
 from uuid import UUID
 from pydantic import BaseModel, Field
 from enum import Enum
-
-
-
-WALLETS = {
-	UUID('123e4567-e89b-43d3-a456-426614174000'): 1000
-}
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from database import get_session
+from models import Wallet
 
 
 class OperationType(str, Enum):
@@ -22,13 +20,13 @@ class Operation(BaseModel):
 
 # что должен отдать get
 class WalletResponse(BaseModel):
-	wallet_id: UUID
+	wallet_uuid: UUID
 	balance: int
 
 
 # что должен отдать post
 class OperationResponse(BaseModel):
-	wallet_id: UUID
+	wallet_uuid: UUID
 	balance: int
 
 
@@ -40,39 +38,45 @@ app = FastAPI()
 	response_model=WalletResponse,
 	tags=["Информация о балансе кошелька"]
 )
-def get_wallet_balance(wallet_uuid: UUID) -> dict:
-	try:
-		return {
-			'wallet_id': wallet_uuid,
-			'balance': WALLETS[wallet_uuid]
-		}
-	except KeyError:
-		raise HTTPException(detail=f'Кошелек {wallet_uuid} не найден!',
-		                    status_code=status.HTTP_404_NOT_FOUND)
+async def get_wallet_balance(
+		wallet_uuid: UUID,
+		session: AsyncSession = Depends(get_session)
+):
+	query = select(Wallet).where(Wallet.wallet_uuid == wallet_uuid)
+	result = await session.execute(query)
+	wallet: Wallet | None = result.scalar_one_or_none()
+
+	if wallet is None:
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+		                    detail=f'В базе нет кошелька с {wallet_uuid}')
+	return {
+		"wallet_uuid": wallet.wallet_uuid,
+		"balance": wallet.balance
+	}
 
 
-@app.post(
-	"/api/v1/wallets/{wallet_uuid}/operation",
-	response_model=OperationResponse,
-	tags=['Операции с кошельком']
-)
-def create_wallet_operation(wallet_uuid: UUID, operation: Operation) -> dict:
-	if wallet_uuid not in WALLETS:
-		raise HTTPException(detail=f'Кошелек {wallet_uuid} не найден!',
-		                    status_code=status.HTTP_404_NOT_FOUND)
-
-	if operation.operation_type == OperationType.DEPOSIT:
-		WALLETS[wallet_uuid] += operation.amount
-		return {
-			'wallet_id': wallet_uuid,
-			'balance': WALLETS[wallet_uuid]
-		}
-
-	elif operation.operation_type == OperationType.WITHDRAW:
-		if operation.amount > WALLETS[wallet_uuid]:
-			raise HTTPException(detail=f"Недостаточно средств на счёте", status_code=status.HTTP_400_BAD_REQUEST)
-		WALLETS[wallet_uuid] -= operation.amount
-		return {
-			'wallet_id': wallet_uuid,
-			'balance': WALLETS[wallet_uuid]
-		}
+# @app.post(
+# 	"/api/v1/wallets/{wallet_uuid}/operation",
+# 	response_model=OperationResponse,
+# 	tags=['Операции с кошельком']
+# )
+# def create_wallet_operation(wallet_uuid: UUID, operation: Operation) -> dict:
+# 	if wallet_uuid not in WALLETS:
+# 		raise HTTPException(detail=f'Кошелек {wallet_uuid} не найден!',
+# 		                    status_code=status.HTTP_404_NOT_FOUND)
+#
+# 	if operation.operation_type == OperationType.DEPOSIT:
+# 		WALLETS[wallet_uuid] += operation.amount
+# 		return {
+# 			'wallet_uuid': wallet_uuid,
+# 			'balance': WALLETS[wallet_uuid]
+# 		}
+#
+# 	elif operation.operation_type == OperationType.WITHDRAW:
+# 		if operation.amount > WALLETS[wallet_uuid]:
+# 			raise HTTPException(detail=f"Недостаточно средств на счёте", status_code=status.HTTP_400_BAD_REQUEST)
+# 		WALLETS[wallet_uuid] -= operation.amount
+# 		return {
+# 			'wallet_uuid': wallet_uuid,
+# 			'balance': WALLETS[wallet_uuid]
+# 		}
