@@ -55,28 +55,46 @@ async def get_wallet_balance(
 	}
 
 
-# @app.post(
-# 	"/api/v1/wallets/{wallet_uuid}/operation",
-# 	response_model=OperationResponse,
-# 	tags=['Операции с кошельком']
-# )
-# def create_wallet_operation(wallet_uuid: UUID, operation: Operation) -> dict:
-# 	if wallet_uuid not in WALLETS:
-# 		raise HTTPException(detail=f'Кошелек {wallet_uuid} не найден!',
-# 		                    status_code=status.HTTP_404_NOT_FOUND)
-#
-# 	if operation.operation_type == OperationType.DEPOSIT:
-# 		WALLETS[wallet_uuid] += operation.amount
-# 		return {
-# 			'wallet_uuid': wallet_uuid,
-# 			'balance': WALLETS[wallet_uuid]
-# 		}
-#
-# 	elif operation.operation_type == OperationType.WITHDRAW:
-# 		if operation.amount > WALLETS[wallet_uuid]:
-# 			raise HTTPException(detail=f"Недостаточно средств на счёте", status_code=status.HTTP_400_BAD_REQUEST)
-# 		WALLETS[wallet_uuid] -= operation.amount
-# 		return {
-# 			'wallet_uuid': wallet_uuid,
-# 			'balance': WALLETS[wallet_uuid]
-# 		}
+@app.post(
+	"/api/v1/wallets/{wallet_uuid}/operation",
+	response_model=OperationResponse,
+	tags=['Операции с кошельком']
+)
+async def create_wallet_operation(
+		wallet_uuid: UUID,
+		operation: Operation,
+		session: AsyncSession = Depends(get_session)
+):
+	query = select(Wallet).where(Wallet.wallet_uuid == wallet_uuid).with_for_update()
+	result = await session.execute(query)
+	wallet: Wallet | None = result.scalar_one_or_none()
+
+	if wallet is None:
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+		                    detail=f'В базе нет кошелька с {wallet_uuid}')
+
+
+	if operation.operation_type == OperationType.DEPOSIT:
+		wallet.balance += operation.amount
+		await session.commit()
+		return {
+			"wallet_uuid": wallet.wallet_uuid,
+			"balance": wallet.balance
+		}
+
+
+	if operation.operation_type == OperationType.WITHDRAW:
+		if operation.amount > wallet.balance:
+			raise HTTPException(
+				status_code=status.HTTP_400_BAD_REQUEST,
+				detail=f"Недостаточно средств на счёте"
+			)
+
+
+		wallet.balance -= operation.amount
+		await session.commit()
+
+		return {
+			'wallet_uuid': wallet.wallet_uuid,
+			'balance': wallet.balance
+		}
