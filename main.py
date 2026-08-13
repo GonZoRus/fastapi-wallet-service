@@ -7,6 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_session
 from models import Wallet
 
+import logging
+from logging_config import configure_logging
+
+configure_logging()
+logger = logging.getLogger(__name__)
+
 
 class OperationType(str, Enum):
 	DEPOSIT = "DEPOSIT"
@@ -47,8 +53,11 @@ async def get_wallet_balance(
 	wallet: Wallet | None = result.scalar_one_or_none()
 
 	if wallet is None:
+		logger.warning(f'Кошелёк {wallet_uuid} не найден')
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
 		                    detail=f'В базе нет кошелька с {wallet_uuid}')
+
+	logger.info(f'Кошелек {wallet_uuid} найден, данные получены')
 	return {
 		"wallet_uuid": wallet.wallet_uuid,
 		"balance": wallet.balance
@@ -70,30 +79,33 @@ async def create_wallet_operation(
 	wallet: Wallet | None = result.scalar_one_or_none()
 
 	if wallet is None:
+		logger.warning(f'Кошелёк {wallet_uuid} не найден')
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
 		                    detail=f'В базе нет кошелька с {wallet_uuid}')
-
 
 	if operation.operation_type == OperationType.DEPOSIT:
 		wallet.balance += operation.amount
 		await session.commit()
+		logger.info(f'Кошелек {wallet_uuid} пополнен на {operation.amount}')
 		return {
 			"wallet_uuid": wallet.wallet_uuid,
 			"balance": wallet.balance
 		}
 
-
 	if operation.operation_type == OperationType.WITHDRAW:
 		if operation.amount > wallet.balance:
+			logger.warning(
+    f"Недостаточно средств на кошельке {wallet_uuid}: "
+    f"запрошено {operation.amount}, доступно {wallet.balance}"
+)
 			raise HTTPException(
 				status_code=status.HTTP_400_BAD_REQUEST,
-				detail=f"Недостаточно средств на счёте"
+				detail="Недостаточно средств на счёте"
 			)
-
 
 		wallet.balance -= operation.amount
 		await session.commit()
-
+		logger.info(f'Со счета кошелька {wallet_uuid} списано: {operation.amount}')
 		return {
 			'wallet_uuid': wallet.wallet_uuid,
 			'balance': wallet.balance
