@@ -83,3 +83,6 @@ CREATE DATABASE wallet_test_db OWNER wallet_user;
 ```bash
 python -m pytest
 ```
+## Дополнительно
+
+[Отзыв AI-ментора о процессе обучения](MENTOR_FEEDBACK.md)
