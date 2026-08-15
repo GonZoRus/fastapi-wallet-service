@@ -25,13 +25,13 @@ class Operation(BaseModel):
     amount: int = Field(gt=0)
 
 
-# что должен отдать get
+
 class WalletResponse(BaseModel):
     wallet_uuid: UUID
     balance: int
 
 
-# что должен отдать post
+
 class OperationResponse(BaseModel):
     wallet_uuid: UUID
     balance: int
