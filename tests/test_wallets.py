@@ -1,8 +1,10 @@
 
 import asyncio
+
 import pytest
+from httpx import ASGITransport, AsyncClient
+
 from main import app
-from httpx import AsyncClient, ASGITransport
 
 
 @pytest.mark.asyncio(loop_scope='session')
@@ -21,7 +23,7 @@ async def test_get_wallet_not_found():
 	transport = ASGITransport(app=app)
 	base_url = "http://test"
 	async with AsyncClient(transport=transport, base_url=base_url) as client:
-		response = await client.get(f"/api/v1/wallets/123e4567-e89b-43d3-a456-426614174003")
+		response = await client.get("/api/v1/wallets/123e4567-e89b-43d3-a456-426614174003")
 		assert response.status_code == 404
 
 
@@ -63,7 +65,7 @@ async def test_withdraw_not_found():
 	transport = ASGITransport(app=app)
 	base_url = "http://test"
 	async with AsyncClient(transport=transport, base_url=base_url) as client:
-		response = await client.post(f"/api/v1/wallets/123e4567-e89b-43d3-a456-426614174003/operation", json={
+		response = await client.post("/api/v1/wallets/123e4567-e89b-43d3-a456-426614174003/operation", json={
 			"operation_type": "WITHDRAW",
 			"amount": 400,
 		})
@@ -75,7 +77,7 @@ async def test_deposit_not_found():
 	transport = ASGITransport(app=app)
 	base_url = "http://test"
 	async with AsyncClient(transport=transport, base_url=base_url) as client:
-		response = await client.post(f"/api/v1/wallets/123e4567-e89b-43d3-a456-426614174003/operation", json={
+		response = await client.post("/api/v1/wallets/123e4567-e89b-43d3-a456-426614174003/operation", json={
 			"operation_type": "DEPOSIT",
 			"amount": 400,
 		})
@@ -154,7 +156,7 @@ async def test_invalid_uuid():
 	transport = ASGITransport(app=app)
 	base_url = "http://test"
 	async with AsyncClient(transport=transport, base_url=base_url) as client:
-		response = await client.post(f"/api/v1/wallets/Булочка/operation", json={
+		response = await client.post("/api/v1/wallets/Булочка/operation", json={
 			"operation_type": "DEPOSIT",
 			"amount": 400,
 		})

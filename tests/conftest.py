@@ -1,14 +1,11 @@
-import pytest
-import pytest_asyncio
 from uuid import UUID
-from sqlalchemy.ext.asyncio import (
-	AsyncSession, create_async_engine,
-	async_sessionmaker
-)
-from main import app
-from database import get_session
-from models import Base, Wallet
 
+import pytest_asyncio
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+from database import get_session
+from main import app
+from models import Base, Wallet
 
 TEST_DATABASE_URL = 'postgresql+asyncpg://wallet_user:wallet_password@localhost:5432/wallet_test_db'
 test_engine = create_async_engine(TEST_DATABASE_URL)

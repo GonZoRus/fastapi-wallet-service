@@ -1,14 +1,15 @@
-from fastapi import FastAPI, HTTPException, status, Depends
-from uuid import UUID
-from pydantic import BaseModel, Field
+import logging
 from enum import Enum
+from uuid import UUID
+
+from fastapi import Depends, FastAPI, HTTPException, status
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from database import get_session
-from models import Wallet
 
-import logging
+from database import get_session
 from logging_config import configure_logging
+from models import Wallet
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -46,7 +47,7 @@ app = FastAPI()
 )
 async def get_wallet_balance(
 		wallet_uuid: UUID,
-		session: AsyncSession = Depends(get_session)
+		session: AsyncSession = Depends(get_session) # noqa: B008
 ):
 	query = select(Wallet).where(Wallet.wallet_uuid == wallet_uuid)
 	result = await session.execute(query)
@@ -72,7 +73,7 @@ async def get_wallet_balance(
 async def create_wallet_operation(
 		wallet_uuid: UUID,
 		operation: Operation,
-		session: AsyncSession = Depends(get_session)
+		session: AsyncSession = Depends(get_session) # noqa: B008
 ):
 	query = select(Wallet).where(Wallet.wallet_uuid == wallet_uuid).with_for_update()
 	result = await session.execute(query)
