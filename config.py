@@ -22,5 +22,5 @@ required_env = {'DB_USER': DB_USER,
 
 for env_key, env_value in required_env.items():
 	if env_value is None:
-		logger.critical(f'В .env нет: {env_key}')
-		raise RuntimeError(f"В .env нет: {env_key}")
+		logger.critical(f'Не задана переменная окружения: {env_key}')
+		raise RuntimeError(f"Не задана переменная окружения: {env_key}")
