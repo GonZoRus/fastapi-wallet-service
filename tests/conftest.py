@@ -3,13 +3,17 @@ from uuid import UUID
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from config import DB_HOST, DB_PASSWORD, DB_PORT, DB_USER
 from database import get_session
 from main import app
 from models import Base, Wallet
 
+TEST_DB_NAME = "wallet_test_db"
+
 TEST_DATABASE_URL = (
-    "postgresql+asyncpg://wallet_user:wallet_password@localhost:5432/wallet_test_db"
+    f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{TEST_DB_NAME}"
 )
+
 test_engine = create_async_engine(TEST_DATABASE_URL)
 
 test_async_session = async_sessionmaker(
